@@ -1,0 +1,20 @@
+{
+  "name": "duckdb-segfault",
+  "version": "1.4.27",
+  "description": "",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "start": "node ./node_modules/.bin/tsc && node ./dist/test.js"
+  },
+  "author": "Lina van der Weg",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "duckdb": "^1.2.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.0",
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2"
+  },
+  "type": "module"
+}
