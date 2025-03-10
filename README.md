@@ -11,7 +11,7 @@ DuckDB segfaults with `node crashed wit SIGSEGv in duckdb::ColumnSegment()::Scan
 - without the updates, no segfault occurs (test with 100k updates/inserts)
 - prepared stetment or not, seems to make no difference
 
-Basic test case (actual code: https://gist.github.com/linaGirl/4d17c9395c25062fb7912b67f47149c0#file-test-ts)
+Basic test case (actual code: https://github.com/linaGirl/duckdb-segfault)
 ```javascript
 const db = new duckdb.Datatbase();
 
