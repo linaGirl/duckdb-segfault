@@ -7,9 +7,9 @@ export const stress = async(db: DB, nInsert: number, nUpdate: number) => {
     await db.beginTransaction();
 
     const maxResistanceIdResult = await db.query(`SELECT MAX(id)::int as max FROM test;`) as { max: number }[];
-    const maxResistanceId = maxResistanceIdResult[0].max;
+    const maxResistanceId = maxResistanceIdResult[0].max ?? 0;
 
-    const updateStatement = await db.prepare(`UPDATE test SET importId = ? WHERE id = ?;`);
+    const updateStatement = await db.prepare(`UPDATE test SET importId = $1 WHERE id = $2;`);
 
     for (let i = 0; i < nUpdate; i++) {
         const id = Math.floor(Math.random() * 1000) + 1;
@@ -24,7 +24,7 @@ export const stress = async(db: DB, nInsert: number, nUpdate: number) => {
         INSERT INTO test (
             id,
             importId
-        ) VALUES (?, ?);
+        ) VALUES ($1, $2);
     `);
 
     

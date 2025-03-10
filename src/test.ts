@@ -4,13 +4,13 @@ import { DB } from './DB.js';
 
 (async() => {
 
-    await setup();
+    //await setup();
 
     const db = new DB();
     await db.load();
 
     for (let i = 0; i < 100; i++) {
-        await stress(db, 1000, 1000);
+        await stress(db, 20, 20);
     }
 
     console.log('Done');

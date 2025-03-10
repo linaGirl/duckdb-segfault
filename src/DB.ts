@@ -1,69 +1,46 @@
-import duckdb, { Connection, Database, Statement } from 'duckdb';
+import { DuckDBConnection, DuckDBInstance, DuckDBPreparedStatement } from '@duckdb/node-api';
 import { promises as fs } from 'fs';
 import path from 'path';
 
 
 export class Prepared {
-    private prepared?: Statement;
-    private connection: Connection;
+    private prepared?: DuckDBPreparedStatement;
+    private connection: DuckDBConnection;
     private sql = '';
 
-    constructor(connection: Connection) {
+    constructor(connection: DuckDBConnection) {
         this.connection = connection;
     }
 
     public async prepare(sql: string) {
         this.sql = sql;
-        this.prepared = await new Promise<Statement>((resolve, reject) => {
-            this.connection.prepare(sql, (err, statement) => {
-                if (err) {
-                    console.log(`Error in conn.prepare: ${sql}`);
-                    reject(err);
-                } else resolve(statement);
-            });
-        });
+        this.prepared = await this.connection.prepare(sql);
     }
 
 
     public async all(values: any[]) {
         if (!this.prepared) throw new Error('PreparedStatement was not prepared!');
 
-        const rows = await new Promise((resolve, reject) => {
-            this.prepared!.all(...values, (err, rows) => {
-                if (err) {
-                    console.log(`Error in statement.all: ${this.sql}`, values);
-                    reject(err);
-                } else resolve(rows);
-            });
-        });
-
-        return rows;
+        this.prepared!.bind(values);
+        const reader = await this.prepared!.runAndReadAll();
+        return reader.getRowObjectsJson();
     }
 
 
-    public run(values: any[]) : Promise<void> {
+    public async run(values: any[]) : Promise<void> {
         if (!this.prepared) throw new Error('PreparedStatement was not prepared!');
 
-        return new Promise((resolve, reject) => {
-            this.prepared!.run(...values, (err) => {
-                if (err)  {
-                    console.log(`Error in statement.run: ${this.sql}`, values);
-                    reject(err);
-                } 
-                else resolve();
-            });
-        });
+        let logSql = this.sql;
+        for (const value of values) {
+            logSql = logSql.replace(/\$\d+/i, value);
+        }
+        console.log(logSql.replace(/\n/g, ' '));
+
+        this.prepared!.bind(values);
+        await this.prepared!.run();
     }
 
     public async finalize() : Promise<void> {
-        if (!this.prepared) return;
-
-        return new Promise((resolve, reject) => {
-            this.prepared!.finalize((err) => {
-                if (err) reject(err);
-                else resolve();
-            });
-        });
     }
 }
 
@@ -71,16 +48,16 @@ export class Prepared {
 
 export class DB {
     private file: string = path.join(path.dirname(new URL(import.meta.url).pathname), 'test.duckdb');
-    private db: Database;
-    private connection: Connection;
+    private db: DuckDBInstance;
+    private connection: DuckDBConnection;
 
     public async load() {
-        this.db = new duckdb.Database(this.file, {
+        this.db = await DuckDBInstance.create(this.file, {
             threads: '4',
             access_mode: 'READ_WRITE',
         });
 
-        this.connection = this.db.connect();
+        this.connection = await this.db.connect();
     }
 
     public async prepare(sql: string) {
@@ -90,14 +67,8 @@ export class DB {
     }
 
     public async query(sql: string) {
-        return new Promise((resolve, reject) => {
-            this.connection.all(sql, (err, result) => {
-                if (err) {
-                    console.log(`Error in query: ${sql}`);
-                    reject(err);
-                } else resolve(result);
-            });
-        });
+        const reader = await this.connection.runAndReadAll(sql);
+        return reader.getRowObjectsJson();
     }
 
     public async beginTransaction() {
@@ -114,7 +85,6 @@ export class DB {
 
     public async close() {
         this.connection.close();
-        this.db.close();
     }
 
     public async statWal(): Promise<number> {
